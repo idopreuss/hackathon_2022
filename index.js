@@ -23,9 +23,9 @@ express()
             }
             )
             .then(res => {
+                console.log('Res:',res.data)
                 console.log(convertFromFigmaToFlex(res.data));
 
-                console.log('Res:',res.data)
 
             })
             .catch(err => {
