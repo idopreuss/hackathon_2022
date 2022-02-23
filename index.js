@@ -89,7 +89,7 @@ function convertFromFigmaToFlex(figmaModel, fileKey) {
                 'X-FIGMA-TOKEN': '330542-09af815a-1f76-4959-ba3e-e3f62ef22310'
             }
         }
-    )
+        )
         .then(res => {
             imagesRes = res.data.meta.images;
             const imageRefToS3 = imagesRes;
@@ -97,13 +97,11 @@ function convertFromFigmaToFlex(figmaModel, fileKey) {
             const rootNode = figmaModel.nodes[firstNodeKey].document;
             gridNames.forEach((gridName) => {
                 addGridToSection({ gridName, rootNode, section, flexSection, imageRefToS3 });
-        })
+            })
+         })
         .catch(err => {
             console.log('Error: ', err.message);
         });
-
-
-    });
 
     return flexSection;
 }
