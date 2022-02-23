@@ -5,7 +5,7 @@ const PORT = process.env.PORT || 5000
 var bodyParser = require('body-parser')
 var jsonParser = bodyParser.json()
 const axios = require('axios');
-
+var imagesRes, nodesRes;
 express()
   .use(express.static(path.join(__dirname, 'public')))
    .use(cors())
@@ -23,14 +23,13 @@ express()
             }
             )
             .then(res => {
-                console.log('Res:',res.data)
-                console.log(convertFromFigmaToFlex(res.data));
-
-
+                nodesRes = res.data;
+                console.log(convertFromFigmaToFlex(nodesRes, req.body.fileKey));
             })
             .catch(err => {
                 console.log('Error: ', err.message);
             });
+
         const figmaRes = {
             fileKey: req.body.fileKey,
             nodeId: req.body.nodeId
@@ -44,11 +43,8 @@ express()
   .listen(PORT, () => console.log(`Listening on ${ PORT }`))
 
 // @Ido - TODO - replace this map with the response from Figma's fills API
-const imageRefToS3 = {
-    '795f4d1768e5f1609eecb76161a6f573e8001dc4': 'url1',
-};
 const idSelectorPlaceholder = '<id>';
-function convertFromFigmaToFlex(figmaModel) {
+function convertFromFigmaToFlex(figmaModel, fileKey) {
     const section = createSection();
     const flexSection = {
         id: generateId('section_wrapper'),
@@ -86,16 +82,33 @@ function convertFromFigmaToFlex(figmaModel) {
         'judges- section 5',
         'prizes- section 6',
     ];
-    const firstNodeKey = Object.keys(figmaModel.nodes)[0];
-    const rootNode = figmaModel.nodes[firstNodeKey].document;
-    gridNames.forEach((gridName) => {
-        addGridToSection({ gridName, rootNode, section, flexSection });
+    const uri = 'https://api.figma.com/v1/files/' + fileKey + '/images';
+    console.log(uri);
+    axios.get(uri, {
+            headers: {
+                'X-FIGMA-TOKEN': '330542-09af815a-1f76-4959-ba3e-e3f62ef22310'
+            }
+        }
+    )
+        .then(res => {
+            imagesRes = res.data.meta.images;
+            const imageRefToS3 = imagesRes;
+            const firstNodeKey = Object.keys(figmaModel.nodes)[0];
+            const rootNode = figmaModel.nodes[firstNodeKey].document;
+            gridNames.forEach((gridName) => {
+                addGridToSection({ gridName, rootNode, section, flexSection, imageRefToS3 });
+        })
+        .catch(err => {
+            console.log('Error: ', err.message);
+        });
+
+
     });
 
     return flexSection;
 }
 // ---- MAIN LOGIC --------
-function addGridToSection({ gridName, rootNode, section, flexSection }) {
+function addGridToSection({ gridName, rootNode, section, flexSection, imageRefToS3 }) {
     const gridNode = rootNode.children.find((child) => child.name === gridName);
     const grid = createGrid({ node: gridNode, section });
     filterBackgroundNodeFromGrid(gridNode);
@@ -105,9 +118,9 @@ function addGridToSection({ gridName, rootNode, section, flexSection }) {
         parentId: section.element.id,
     });
     const gridWidgetNodes = getWidgetNodesOfGrid(gridNode);
-    addWidgetsToGrid({ flexSection, grid, gridNode, gridWidgetNodes });
+    addWidgetsToGrid({ flexSection, grid, gridNode, gridWidgetNodes, imageRefToS3 });
 }
-function addWidgetsToGrid({ flexSection, grid, gridNode, gridWidgetNodes }) {
+function addWidgetsToGrid({ flexSection, grid, gridNode, gridWidgetNodes, imageRefToS3 }) {
     const gridOffset = findGridOffset(gridNode);
     gridWidgetNodes.forEach((widgetNode) => {
         const widgetId = `widget_${widgetNode.id}`;
@@ -116,6 +129,7 @@ function addWidgetsToGrid({ flexSection, grid, gridNode, gridWidgetNodes }) {
             widgetNode,
             parentId: grid.element.id,
             gridOffset,
+            imageRefToS3
         });
         addElementToModel({
             flexSection,
@@ -171,12 +185,14 @@ function createGrid({ node, section }) {
     };
     return { element, style };
 }
-function createWidget({ widgetId, widgetNode, parentId, gridOffset }) {
+function createWidget({ widgetId, widgetNode, parentId, gridOffset, imageRefToS3 }) {
     const widgetType = getWidgetType(widgetNode);
     let imageUrl;
     if (widgetType === 'image') {
         const imageRef = widgetNode.fills[0].imageRef;
+
         imageUrl = imageRefToS3[imageRef];
+        console.log(imageUrl);
     }
     const element = {
         id: widgetId,
