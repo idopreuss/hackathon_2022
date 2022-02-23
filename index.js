@@ -43,7 +43,10 @@ express()
     })
   .listen(PORT, () => console.log(`Listening on ${ PORT }`))
 
-
+// @Ido - TODO - replace this map with the response from Figma's fills API
+const imageRefToS3 = {
+    '795f4d1768e5f1609eecb76161a6f573e8001dc4': 'url1',
+};
 const idSelectorPlaceholder = '<id>';
 function convertFromFigmaToFlex(figmaModel) {
     const section = createSection();
@@ -76,13 +79,19 @@ function convertFromFigmaToFlex(figmaModel) {
             ],
         },
     };
-    const rootNodeName = '1200';
-    const grid1Name = 'about- section 2';
+    const gridNames = [
+        'about- section 2',
+        'the gist- section 3',
+        'agenda- section 4',
+        'judges- section 5',
+        'prizes- section 6',
+    ];
     const firstNodeKey = Object.keys(figmaModel.nodes)[0];
-    const rootNode = figmaModel.nodes[firstNodeKey].document.children.find(
-        (child) => child.name === rootNodeName
-    );
-    addGridToSection({ gridName: grid1Name, rootNode, section, flexSection });
+    const rootNode = figmaModel.nodes[firstNodeKey].document;
+    gridNames.forEach((gridName) => {
+        addGridToSection({ gridName, rootNode, section, flexSection });
+    });
+
     return flexSection;
 }
 // ---- MAIN LOGIC --------
@@ -164,6 +173,11 @@ function createGrid({ node, section }) {
 }
 function createWidget({ widgetId, widgetNode, parentId, gridOffset }) {
     const widgetType = getWidgetType(widgetNode);
+    let imageUrl;
+    if (widgetType === 'image') {
+        const imageRef = widgetNode.fills[0].imageRef;
+        imageUrl = imageRefToS3[imageRef];
+    }
     const element = {
         id: widgetId,
         parentId: parentId,
@@ -175,6 +189,7 @@ function createWidget({ widgetId, widgetNode, parentId, gridOffset }) {
             'data-widget-type': widgetType,
             content: widgetNode.name,
             style: widgetNode.style,
+            imageUrl,
         },
         dataExtension: null,
     };
@@ -209,9 +224,11 @@ function filterBackgroundNodeFromGrid(gridNode) {
 function getWidgetNodesOfGrid(node) {
     let children = [];
     node.children.forEach((childNode) => {
-        if (childNode.type === 'FRAME') {
+        if (childNode.type === 'FRAME' || childNode.type === 'GROUP') {
             const subChildren = getWidgetNodesOfGrid(childNode);
             children = [...children, ...subChildren];
+        } else if (childNode.type === 'ELLIPSE') {
+            // do nothing
         } else {
             children.push(childNode);
         }
