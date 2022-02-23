@@ -11,6 +11,7 @@ express()
   .set('views', path.join(__dirname, 'views'))
   .set('view engine', 'ejs')
     .get('/', (req, res) => res.render('pages/index'))
+    .get('/hellp', (req, res) => res.status(200).send({ file:111 }))
     .post('/api', jsonParser, (req, res) => {
         const figmaRes = {
             fileKey: req.body.fileKey,
