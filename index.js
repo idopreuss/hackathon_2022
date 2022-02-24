@@ -60,9 +60,8 @@ express()
         res.status(200).send(figmaRes);
     })
     .post('/webhook', jsonParser, (req, res) => {
-
         const commentUrl = 'https://api.figma.com/v1/files/'+ 'cMta8OmZc2sHrTDX6YIYXa' +'/comments';
-        console.log('commentUrl ', commentUrl);
+        console.log('BODY ', req.body);
         const payload = {
             message: req.body.message.text,
             client_meta: {
