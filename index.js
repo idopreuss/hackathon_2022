@@ -49,9 +49,9 @@ express()
                 console.log('Error: ', err.message);
             });
         })
-            .catch(err => {
-                console.log('Error: ', err.message);
-            });
+        .catch(err => {
+            console.log('Error: ', err.message);
+        });
 
         const figmaRes = {
             fileKey: req.body.fileKey,
@@ -60,19 +60,29 @@ express()
         res.status(200).send(figmaRes);
     })
     .post('/webhook', jsonParser, (req, res) => {
-        console.log('BODY', req.body);
-        const commentUrl = 'POST/v1/files/'+ fileKey+'/comments';
+
+        const commentUrl = 'https://api.figma.com/v1/files/'+ 'cMta8OmZc2sHrTDX6YIYXa' +'/comments';
+        console.log('commentUrl ', commentUrl);
         const payload = {
             message: req.body.message.text,
             client_meta: {
-                node_id: nodeId,
+                node_id: '808:269',
                 node_offset: {
                     x: 500,
                     y: 1000
                 }
             }
         }
-        let resComment = axios.post(commentUrl, payload);
+        try {
+
+            let resComment = axios.post(commentUrl, payload, {headers: {
+                    'X-FIGMA-TOKEN': '331321-91e1ac0c-add8-4df6-bfff-539b90805333'
+                }
+            });
+        }
+        catch(e){
+            console.log("Cannot add comment in figma");
+        }
         res.status(200).send();
     })
     .listen(PORT, () => console.log(`Listening on ${PORT}`));
