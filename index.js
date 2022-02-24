@@ -63,7 +63,7 @@ express()
         const commentUrl = 'https://api.figma.com/v1/files/'+ 'cMta8OmZc2sHrTDX6YIYXa' +'/comments';
         console.log('BODY ', req.body);
         const payload = {
-            message: req.body.data.message.text,
+            message: req.body.data.comment.text,
             client_meta: {
                 node_id: '808:269',
                 node_offset: {
